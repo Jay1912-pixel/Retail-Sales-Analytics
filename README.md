@@ -95,8 +95,3 @@ retail-sales-intelligence/
     └── business_insights.md     ← findings & recommendations
 ```
 
----
-
-## Dashboard Preview
-
-*(Add screenshots of your three Power BI pages here — Executive Overview, Customer Insights, Product Trends)*
