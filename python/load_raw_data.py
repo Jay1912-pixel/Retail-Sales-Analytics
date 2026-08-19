@@ -12,7 +12,7 @@ from sqlalchemy import create_engine
 
 # ---- CONFIG ----
 RAW_PATH = "data/raw/online_retail_II.xlsx"
-DB_CONNECTION = "mysql+mysqlconnector://root:2005@localhost/retail_db"
+DB_CONNECTION = "mysql+mysqlconnector://root:Your_PASSWORD@localhost/retail_db"
 
 # ---- Load Excel (both sheets) ----
 print("Reading Excel file... this may take 20-30 seconds")
