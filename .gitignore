@@ -1,4 +1,14 @@
-data/raw/*.xlsx 
-*.zip 
-__pycache__/ 
-*.pyc 
+# Credentials
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Raw data
+data/raw/*.xlsx
+*.zip

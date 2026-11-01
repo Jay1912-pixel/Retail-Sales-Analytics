@@ -1,3 +1,4 @@
+
 """
 Step 3: Load raw data into MySQL staging table
 Retail Sales Intelligence Project
@@ -7,26 +8,50 @@ No cleaning here — that happens in Step 4. This just gets data
 out of Excel and into the database.
 """
 
+import os
 import pandas as pd
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
+
+# ---- LOAD ENVIRONMENT VARIABLES ----
+load_dotenv()
+
+required_vars = ["DB_USER", "DB_PASSWORD", "DB_HOST", "DB_NAME"]
+missing = [var for var in required_vars if not os.getenv(var)]
+
+if missing:
+    raise ValueError(
+        f"Missing environment variables in .env: {', '.join(missing)}"
+    )
 
 # ---- CONFIG ----
 RAW_PATH = "data/raw/online_retail_II.xlsx"
-DB_CONNECTION = "mysql+mysqlconnector://root:Your_PASSWORD@localhost/retail_db"
 
-# ---- Load Excel (both sheets) ----
+db_url = URL.create(
+    drivername="mysql+mysqlconnector",
+    username=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    host=os.getenv("DB_HOST"),
+    database=os.getenv("DB_NAME")
+)
+
+# ---- LOAD EXCEL (BOTH SHEETS) ----
 print("Reading Excel file... this may take 20-30 seconds")
+
 sheet_names = ["Year 2009-2010", "Year 2010-2011"]
 dfs = []
+
 for sheet in sheet_names:
     df = pd.read_excel(RAW_PATH, sheet_name=sheet)
     df["source_sheet"] = sheet
     dfs.append(df)
 
 data = pd.concat(dfs, ignore_index=True)
+
 print(f"Loaded {len(data):,} rows from Excel")
 
-# ---- Rename columns to match staging_raw table ----
+# ---- RENAME COLUMNS TO MATCH STAGING TABLE ----
 data = data.rename(columns={
     "Invoice": "invoice",
     "StockCode": "stock_code",
@@ -39,22 +64,29 @@ data = data.rename(columns={
     "source_sheet": "source_sheet"
 })
 
-# Customer ID needs to be string, not float (it currently has NaN + floats like 13085.0)
+# Customer ID needs to be string, not float
+# It currently contains NaN and floats like 13085.0
 data["customer_id"] = data["customer_id"].apply(
     lambda x: str(int(x)) if pd.notnull(x) else None
 )
 
-# ---- Connect and load into staging table ----
+# ---- CONNECT AND LOAD INTO STAGING TABLE ----
 print("Connecting to MySQL...")
-engine = create_engine(DB_CONNECTION)
 
-print("Writing to staging_raw table... this may take 1-2 minutes for 1M+ rows")
-data.to_sql(
-    "staging_raw",
-    con=engine,
-    if_exists="append",  # schema.sql already created the table structure
-    index=False,
-    chunksize=5000        # load in batches so it doesn't overwhelm memory
-)
+engine = create_engine(db_url)
 
-print(f"Done! Loaded {len(data):,} rows into staging_raw table.")
+try:
+    print("Writing to staging_raw table... this may take 1-2 minutes for 1M+ rows")
+
+    data.to_sql(
+        "staging_raw",
+        con=engine,
+        if_exists="append",  # schema.sql already created the table structure
+        index=False,
+        chunksize=5000       # load in batches
+    )
+
+    print(f"Done! Loaded {len(data):,} rows into staging_raw table.")
+
+finally:
+    engine.dispose()
